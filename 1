@@ -1,0 +1,53 @@
+import com.ibm.mq.jms.MQQueueConnectionFactory;
+import com.ibm.mq.jms.MQQueueConnection;
+import com.ibm.mq.jms.MQQueueSession;
+import com.ibm.mq.jms.MQQueue;
+import com.ibm.mq.jms.MQQueueSender;
+import javax.jms.Session;
+import javax.jms.JMSException;
+import javax.jms.TextMessage;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import java.io.FileInputStream;
+import java.security.KeyStore;
+
+try {
+    // Load the key store
+    KeyStore keyStore = KeyStore.getInstance("PKCS12");
+    FileInputStream fileInputStream = new FileInputStream("path/to/keystore.p12");
+    keyStore.load(fileInputStream, "your_keystore_password".toCharArray());
+    fileInputStream.close();
+
+    // Initialize the key manager factory
+    KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+    keyManagerFactory.init(keyStore, "your_keystore_password".toCharArray());
+
+    // Initialize the SSL context
+    SSLContext sslContext = SSLContext.getInstance("TLS");
+    sslContext.init(keyManagerFactory.getKeyManagers(), null, null);
+
+    MQQueueConnectionFactory cf = new MQQueueConnectionFactory();
+
+    cf.setHostName("xyz.com");
+    cf.setPort(1414);
+    cf.setQueueManager("manager_name");
+    cf.setChannel("channel_name");  // add your channel name here
+    cf.setTransportType(1);  // TRANSPORT_MQSERIES_CLIENT
+    cf.setSSLCipherSuite("ECDHE_RSA_AES_256_GCM_SHA384");
+    cf.setSSLContext(sslContext);  // Set the SSL context
+
+    MQQueueConnection connection = (MQQueueConnection) cf.createQueueConnection();
+    MQQueueSession session = (MQQueueSession) connection.createQueueSession(false, Session.AUTO_ACKNOWLEDGE);
+    MQQueue queue = (MQQueue) session.createQueue("queue://queue_name");
+
+    MQQueueSender sender =  (MQQueueSender) session.createSender(queue);
+    TextMessage message = session.createTextMessage();
+
+    message.setText("This is a test message");
+    sender.send(message);
+    sender.close();
+    session.close();
+    connection.close();
+} catch (Exception e) {
+    e.printStackTrace();
+}
