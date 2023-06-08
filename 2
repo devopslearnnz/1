@@ -1,0 +1,44 @@
+import com.ibm.mq.jms.MQConnectionFactory
+import javax.jms.Connection
+import javax.jms.Session
+import javax.jms.TextMessage
+
+def host = "mq-xyz.com"
+def port = 1414
+def manager = "QWERES3"
+def channel = "EDE.AEFDER.SERDSDE.M"
+def cipher = "ECDHE_RSA_AES_256_GCM_SHA384"
+def queueName = "YOUR_QUEUE_NAME"
+def messageText = "Hello, MQ!"
+
+// Create MQ connection factory
+def cf = new MQConnectionFactory()
+cf.setHostName(host)
+cf.setPort(port)
+cf.setQueueManager(manager)
+cf.setChannel(channel)
+cf.setCipherSuite(cipher)
+
+// Create MQ connection
+def connection = cf.createConnection()
+connection.start()
+
+// Create MQ session
+def session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+
+// Create MQ queue
+def queue = session.createQueue(queueName)
+
+// Create MQ producer
+def producer = session.createProducer(queue)
+
+// Create message
+def message = session.createTextMessage(messageText)
+
+// Send message
+producer.send(message)
+
+// Clean up resources
+producer.close()
+session.close()
+connection.close()
