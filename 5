@@ -1,0 +1,89 @@
+import com.ibm.mq.jms.MQConnectionFactory
+import com.ibm.mq.jms.MQQueueConnectionFactory
+import com.ibm.mq.jms.MQQueue
+import javax.jms.Connection
+import javax.jms.Session
+import javax.jms.TextMessage
+import com.ibm.mq.jms.JMSC
+import java.io.FileInputStream
+import java.security.KeyStore
+import java.security.SecureRandom
+import javax.net.ssl.SSLContext
+import javax.net.ssl.TrustManager
+import javax.net.ssl.TrustManagerFactory
+import javax.net.ssl.X509TrustManager
+import java.security.cert.X509Certificate
+
+def host = "mq-xyz.com"
+def port = 1414
+def manager = "QWERES3"
+def channel = "EDE.AEFDER.SERDSDE.M"
+def queueName = "YOUR_QUEUE_NAME"
+def messageText = "Hello, MQ!"
+def keystorePath = "PATH_TO_KEYSTORE.p12"
+def keystorePassword = "KEYSTORE_PASSWORD"
+
+System.setProperty("com.ibm.mq.cfg.useIBMCipherMappings", "false")
+
+// Create MQ connection factory
+def cf = new MQQueueConnectionFactory()
+cf.setHostName(host)
+cf.setPort(port)
+cf.setQueueManager(manager)
+cf.setChannel(channel)
+
+// Create custom TrustManager that loads the keystore
+def trustManager = new X509TrustManager() {
+    def trustStore
+
+    {
+        trustStore = KeyStore.getInstance("PKCS12")
+        trustStore.load(new FileInputStream(keystorePath), keystorePassword.toCharArray())
+    }
+
+    X509Certificate[] getAcceptedIssuers() {
+        null
+    }
+
+    void checkClientTrusted(X509Certificate[] certs, String authType) {
+    }
+
+    void checkServerTrusted(X509Certificate[] certs, String authType) {
+        for (cert in certs) {
+            if (trustStore.getCertificateAlias(cert) == null) {
+                throw new java.security.cert.CertificateException("Untrusted certificate: " + cert.getSubjectDN())
+            }
+        }
+    }
+}
+
+// Create SSLContext and configure it with the custom TrustManager
+def sslContext = SSLContext.getInstance("TLS")
+sslContext.init(null, [trustManager] as TrustManager[], new SecureRandom())
+
+// Configure SSL context for MQ connection factory
+cf.setSSLSocketFactory(sslContext.getSocketFactory())
+
+// Create MQ connection
+def connection = cf.createConnection()
+connection.start()
+
+// Create MQ session
+def session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE)
+
+// Create MQ queue
+def queue = session.createQueue(queueName)
+
+// Create MQ producer
+def producer = session.createProducer(queue)
+
+// Create message
+def message = session.createTextMessage(messageText)
+
+// Send message
+producer.send(message)
+
+// Clean up resources
+producer.close()
+session.close()
+connection.close()
