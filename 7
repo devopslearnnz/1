@@ -1,0 +1,11 @@
+...
+// Set Cipher Suite
+def cipherSuite = "ECDHE_RSA_AES_256_GCM_SHA384"
+cf.setStringProperty(WMQConstants.WMQ_SSL_CIPHER_SUITE, cipherSuite)
+
+// Set the key store and trust store system properties
+System.setProperty("javax.net.ssl.keyStore", "path/to/your/keystore.jks")
+System.setProperty("javax.net.ssl.keyStorePassword", "yourkeystorepassword")
+System.setProperty("javax.net.ssl.trustStore", "path/to/your/truststore.jks")
+System.setProperty("javax.net.ssl.trustStorePassword", "yourtruststorepassword")
+...
